@@ -1,0 +1,47 @@
+version: '3.8'
+
+services:
+  redis:
+    image: redis:latest
+    container_name: redis
+    ports:
+      - "6379:6379"
+    environment:
+      - REDIS_PASSWORD=${REDIS_PASSWORD}
+    volumes:
+      - redis-data:/data
+    networks:
+      - redis-network
+    command: >
+      sh -c "redis-server --requirepass ${REDIS_PASSWORD} --appendonly yes --appendfilename appendonly.aof --dir /data"
+    healthcheck:
+      test: [ "CMD", "redis-cli", "-a", "${REDIS_PASSWORD}", "ping" ]
+      interval: 30s
+      retries: 3
+      start_period: 30s
+      timeout: 10s
+
+  redisinsight:
+    image: redis/redisinsight:latest
+    container_name: redisinsight
+    ports:
+      - "8002:5540"
+    environment:
+      - REDISINSIGHT_AUTH_ENABLED=true
+      - REDISINSIGHT_AUTH_USERNAME=admin
+      - REDISINSIGHT_AUTH_PASSWORD=${REDISINSIGHT_AUTH_PASSWORD}
+    networks:
+      - redis-network
+    healthcheck:
+      test: [ "CMD", "wget", "--spider", "http://localhost:5540" ]
+      interval: 30s
+      retries: 3
+      start_period: 30s
+      timeout: 10s
+
+networks:
+  redis-network:
+    driver: bridge
+
+volumes:
+  redis-data:
